@@ -1,6 +1,6 @@
 ﻿namespace Minimal.WebApi.Meetup;
 
-internal class Meetup
+internal class MeetupEntity
 {
     public Guid Id { get; set; }
     public string Topic { get; set; }
