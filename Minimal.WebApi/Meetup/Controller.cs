@@ -10,7 +10,10 @@ using System.Net.Mime;
 [Produces(MediaTypeNames.Application.Json)]
 public class MeetupController : ControllerBase
 {
-    private readonly DatabaseContext _context = new();
+    private readonly DatabaseContext _context;
+
+    public MeetupController(DatabaseContext context) =>
+        _context = context;
 
     /// <summary>
     /// Create a new meetup

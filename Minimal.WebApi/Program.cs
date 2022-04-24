@@ -1,7 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Minimal.WebApi;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var configuration = new ConfigurationBuilder()
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json")
+    .Build();
 
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
@@ -12,6 +18,11 @@ builder.Services.AddSwaggerGen(options =>
     var xmlFileName = $"{projectName}.xml";
 
     options.IncludeXmlComments(Path.Combine(projectDirectory, xmlFileName));
+});
+builder.Services.AddDbContext<DatabaseContext>(options =>
+{
+    var connectionString = configuration.GetConnectionString("PostgreSQL");
+    options.UseNpgsql(connectionString);
 });
 
 var app = builder.Build();
