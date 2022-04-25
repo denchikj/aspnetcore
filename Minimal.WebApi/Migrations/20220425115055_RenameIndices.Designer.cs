@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Minimal.WebApi.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20220425094315_EditModels")]
-    partial class EditModels
+    [Migration("20220425115055_RenameIndices")]
+    partial class RenameIndices
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

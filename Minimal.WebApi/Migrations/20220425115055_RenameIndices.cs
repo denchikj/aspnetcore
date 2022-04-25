@@ -4,10 +4,14 @@
 
 namespace Minimal.WebApi.Migrations
 {
-    public partial class EditModels : Migration
+    public partial class RenameIndices : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.RenameTable(
+                name: "Meetups",
+                newName: "meetups");
+
             migrationBuilder.RenameIndex(
                 name: "pk_users",
                 table: "users",
@@ -31,6 +35,10 @@ namespace Minimal.WebApi.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.RenameTable(
+                name: "meetups",
+                newName: "Meetups");
+
             migrationBuilder.RenameIndex(
                 name: "pk_users",
                 table: "users",
