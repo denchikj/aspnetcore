@@ -19,6 +19,10 @@ public class ReadMeetupDto
     /// <summary>Meetup location.</summary>
     /// <example>Oslo</example>
     public int Duration { get; set; }
+
+    /// <summary>Number of users signed up for the meetup.</summary>
+    /// <example>42</example>
+    public int SignedUp { get; set; }
 }
 
 public class CreateMeetupDto

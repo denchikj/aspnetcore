@@ -2,6 +2,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Minimal.WebApi.Meetup;
 
 public class UserEntity
 {
@@ -9,6 +10,8 @@ public class UserEntity
     public string DisplayName { get; set; }
     public string Username { get; set; }
     public string Password { get; set; }
+
+    public ICollection<MeetupEntity> SignedUpMeetups { get; set; }
 }
 
 internal class UserEntityTypeConfiguration : IEntityTypeConfiguration<UserEntity>

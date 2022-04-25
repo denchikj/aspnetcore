@@ -23,7 +23,7 @@ public class JwtTokenHelper
         var accessTokenLifetimeInMinutes = int.Parse(configuration["JwtAuth:AccessTokenLifetime"]);
         _accessTokenLifetime = TimeSpan.FromMinutes(accessTokenLifetimeInMinutes);
 
-        var refreshTokenLifetimeInDays = int.Parse(configuration["JwtAuth:RefreshTokenLifetim"]);
+        var refreshTokenLifetimeInDays = int.Parse(configuration["JwtAuth:RefreshTokenLifetime"]);
         _refreshTokenLifetime = TimeSpan.FromMinutes(refreshTokenLifetimeInDays);
     }
 
