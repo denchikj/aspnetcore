@@ -64,6 +64,7 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseNpgsql(connectionString);
 });
 builder.Services.AddScoped<JwtTokenHelper>();
+builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
 builder.Services.AddControllers();
 
 

@@ -1,5 +1,6 @@
 ﻿namespace Minimal.WebApi.Meetup;
 
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Mime;
@@ -11,9 +12,13 @@ using System.Net.Mime;
 public class MeetupController : ControllerBase
 {
     private readonly DatabaseContext _context;
+    private readonly IMapper _mapper;
 
-    public MeetupController(DatabaseContext context) =>
+    public MeetupController(DatabaseContext context, IMapper mapper)
+    {
         _context = context;
+        _mapper = mapper;
+    }
 
     /// <summary>
     /// Create a new meetup
@@ -23,23 +28,12 @@ public class MeetupController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateMeetup([FromBody] CreateMeetupDto createDto)
     {
-        var newMeetup = new MeetupEntity
-        {
-            Id = Guid.NewGuid(),
-            Topic = createDto.Topic,
-            Place = createDto.Place,
-            Duration = createDto.Duration
-        };
+        var newMeetup = _mapper.Map<MeetupEntity>(createDto);
+
         _context.Meetups.Add(newMeetup);
         await _context.SaveChangesAsync();
 
-        var readDto = new ReadMeetupDto
-        {
-            Id = newMeetup.Id,
-            Topic = newMeetup.Topic,
-            Place = newMeetup.Place,
-            Duration = newMeetup.Duration
-        };
+        var readDto = _mapper.Map<ReadMeetupDto>(newMeetup);
 
         return Ok(readDto);
     }
@@ -50,13 +44,7 @@ public class MeetupController : ControllerBase
     public async Task<IActionResult> GetAllMeetups()
     {
         var meetups = await _context.Meetups.ToListAsync();
-        var readDtos = meetups.Select(meetup => new ReadMeetupDto
-        {
-            Id = meetup.Id,
-            Topic = meetup.Topic,
-            Place = meetup.Place,
-            Duration = meetup.Duration
-        });
+        var readDtos = _mapper.Map<ICollection<ReadMeetupDto>>(meetups);
 
         return Ok(readDtos);
     }
@@ -78,10 +66,7 @@ public class MeetupController : ControllerBase
             return NotFound();
         }
 
-        oldMeetup.Topic = updateDto.Topic;
-        oldMeetup.Place = updateDto.Place;
-        oldMeetup.Duration = updateDto.Duration;
-
+        _mapper.Map(updateDto, oldMeetup);
         await _context.SaveChangesAsync();
 
         return NoContent();
@@ -106,13 +91,7 @@ public class MeetupController : ControllerBase
         _context.Meetups.Remove(meetupToDelete);
         await _context.SaveChangesAsync();
 
-        var readDto = new ReadMeetupDto
-        {
-            Id = meetupToDelete.Id,
-            Topic = meetupToDelete.Topic,
-            Place = meetupToDelete.Place,
-            Duration = meetupToDelete.Duration
-        };
+        var readDto = _mapper.Map<ReadMeetupDto>(meetupToDelete);
 
         return Ok(readDto);
     }

@@ -1,5 +1,6 @@
 ﻿namespace Minimal.WebApi.User;
 
+using AutoMapper;
 using BCrypt.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,12 +21,14 @@ public class UserController : ControllerBase
     private readonly DatabaseContext _context;
     private readonly IConfiguration _configuration;
     private readonly JwtTokenHelper _tokenHelper;
+    private readonly IMapper _mapper;
 
-    public UserController(DatabaseContext context, IConfiguration configuration, JwtTokenHelper tokenHelper)
+    public UserController(DatabaseContext context, IConfiguration configuration, JwtTokenHelper tokenHelper, IMapper mapper)
     {
         _context = context;
         _configuration = configuration;
         _tokenHelper = tokenHelper;
+        _mapper = mapper;
     }
 
     /// <summary>Get information about the current user.</summary>
@@ -40,12 +43,7 @@ public class UserController : ControllerBase
 
         var currentUser = await _context.Users.SingleAsync(user => user.Id == currentUserId);
 
-        var readDto = new ReadUserDto
-        {
-            Id = currentUser.Id,
-            DisplayName = currentUser.DisplayName,
-            Username = currentUser.Username
-        };
+        var readDto = _mapper.Map<ReadUserDto>(currentUser);
 
         return Ok(readDto);
     }
@@ -65,22 +63,13 @@ public class UserController : ControllerBase
             return Conflict("Username already token.");
         }
 
-        var newUser = new UserEntity
-        {
-            Id = Guid.NewGuid(),
-            DisplayName = registerDto.DisplayName,
-            Username = registerDto.Username,
-            Password = BCrypt.HashPassword(registerDto.Password)
-        };
+        var newUser = _mapper.Map<UserEntity>(registerDto);
+        newUser.Password = BCrypt.HashPassword(registerDto.Password);
+
         _context.Users.Add(newUser);
         await _context.SaveChangesAsync();
 
-        var readDto = new ReadUserDto
-        {
-            Id = newUser.Id,
-            DisplayName = newUser.DisplayName,
-            Username = newUser.Username
-        };
+        var readDto = _mapper.Map<ReadUserDto>(newUser);
 
         return Ok(readDto);
     }
@@ -119,11 +108,7 @@ public class UserController : ControllerBase
 
         var tokenPair = _tokenHelper.IssueTokenPair(user.Id, refreshTokenEntity.Id);
         // Return token pair back to user
-        var tokenPairDto = new TokenPairDto
-        {
-            AccessToken = tokenPair.AccessToken,
-            RefreshToken = tokenPair.RefreshToken
-        };
+        var tokenPairDto = _mapper.Map<TokenPairDto>(tokenPair);
 
         return Ok(tokenPairDto);
     }
@@ -177,11 +162,7 @@ public class UserController : ControllerBase
         var tokenPair = _tokenHelper.IssueTokenPair(userId, refreshTokenEntity.Id);
 
         // Return new token pair back to user
-        var tokenPairDto = new TokenPairDto
-        {
-            AccessToken = tokenPair.AccessToken,
-            RefreshToken = tokenPair.RefreshToken
-        };
+        var tokenPairDto = _mapper.Map<TokenPairDto>(tokenPair);
 
         return Ok(tokenPairDto);
     }
