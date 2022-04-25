@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Minimal.WebApi.Features.User.DTO;
+using Minimal.WebApi.Features.User.Entities;
 using Minimal.WebApi.Helpers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mime;

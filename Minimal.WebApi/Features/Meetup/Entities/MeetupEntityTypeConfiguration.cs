@@ -1,18 +1,8 @@
-﻿namespace Minimal.WebApi.Meetup;
+﻿namespace Minimal.WebApi.Features.Meetup.Entities;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Minimal.WebApi.User;
-
-public class MeetupEntity
-{
-    public Guid Id { get; set; }
-    public string Topic { get; set; }
-    public string Place { get; set; }
-    public int Duration { get; set; }
-
-    public ICollection<UserEntity> SignedUpUsers { get; set; }
-}
+using Minimal.WebApi.Features.User.Entities;
 
 internal class MeetupEntityTypeConfiguration : IEntityTypeConfiguration<MeetupEntity>
 {

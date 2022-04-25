@@ -1,5 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Minimal.WebApi.Extensions;
+using Minimal.WebApi.Features.User.Helpers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
@@ -19,7 +20,7 @@ public class JwtTokenHelper
         _configuration = configuration;
     }
 
-    public IDictionary<string, string> ParseToken(string token)
+    public IDictionary<string, string>? ParseToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters
         {
@@ -44,7 +45,7 @@ public class JwtTokenHelper
         }
     }
 
-    public IDictionary<string, string> ParseToken(string token, byte[] jwtSecret)
+    public IDictionary<string, string>? ParseToken(string token, byte[] jwtSecret)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         tokenHandler.InboundClaimTypeMap.Clear();
@@ -109,7 +110,5 @@ public class JwtTokenHelper
             _configuration.GetRefreshTokenLifetime());
 
         return new TokenPair(accessToken, refreshToken);
-    }
-
-    public record TokenPair(string AccessToken, string RefreshToken);
+    }    
 }

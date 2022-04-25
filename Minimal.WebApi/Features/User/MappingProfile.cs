@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
-using Minimal.WebApi.Helpers;
+using Minimal.WebApi.Features.User.DTO;
+using Minimal.WebApi.Features.User.Entities;
+using Minimal.WebApi.Features.User.Helpers;
 
 namespace Minimal.WebApi.User;
 
@@ -9,6 +11,6 @@ public class UserMappingProfile : Profile
     {
         CreateMap<UserEntity, ReadUserDto>();
         CreateMap<RegisterUserDto, UserEntity>();
-        CreateMap<JwtTokenHelper.TokenPair, TokenPairDto>();
+        CreateMap<TokenPair, TokenPairDto>();
     }
 }
