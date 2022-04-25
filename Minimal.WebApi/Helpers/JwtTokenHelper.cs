@@ -1,4 +1,5 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using Minimal.WebApi.Extensions;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
@@ -7,9 +8,7 @@ namespace Minimal.WebApi.Helpers;
 public class JwtTokenHelper
 {
     private readonly JwtSecurityTokenHandler _tokenHandler;
-    private readonly SymmetricSecurityKey _securityKey;
-    private readonly TimeSpan _accessTokenLifetime;
-    private readonly TimeSpan _refreshTokenLifetime;
+    private readonly IConfiguration _configuration;
 
     public JwtTokenHelper(IConfiguration configuration)
     {
@@ -17,14 +16,7 @@ public class JwtTokenHelper
         _tokenHandler.InboundClaimTypeMap.Clear();
         _tokenHandler.OutboundClaimTypeMap.Clear();
 
-        var jwtSecret = Encoding.ASCII.GetBytes(configuration["JwtAuth:Secret"]);
-        _securityKey = new SymmetricSecurityKey(jwtSecret);
-
-        var accessTokenLifetimeInMinutes = int.Parse(configuration["JwtAuth:AccessTokenLifetime"]);
-        _accessTokenLifetime = TimeSpan.FromMinutes(accessTokenLifetimeInMinutes);
-
-        var refreshTokenLifetimeInDays = int.Parse(configuration["JwtAuth:RefreshTokenLifetime"]);
-        _refreshTokenLifetime = TimeSpan.FromMinutes(refreshTokenLifetimeInDays);
+        _configuration = configuration;
     }
 
     public IDictionary<string, string> ParseToken(string token)
@@ -33,7 +25,7 @@ public class JwtTokenHelper
         {
             RequireSignedTokens = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = _securityKey,
+            IssuerSigningKey = _configuration.GetAuthSecret(),
             ValidateAudience = false,
             ValidateIssuer = false,
             RequireExpirationTime = true,
@@ -89,7 +81,7 @@ public class JwtTokenHelper
         {
             Claims = claims,
             Expires = DateTime.UtcNow.Add(lifetime),
-            SigningCredentials = new SigningCredentials(_securityKey,
+            SigningCredentials = new SigningCredentials(_configuration.GetAuthSecret(),
                 SecurityAlgorithms.HmacSha256Signature)
         };
 
@@ -106,7 +98,7 @@ public class JwtTokenHelper
             {
                 {"sub", userId}
             },
-            _accessTokenLifetime);
+            _configuration.GetAccessTokenLifetime());
 
         var refreshToken = IssueToken(
             new Dictionary<string, object>
@@ -114,7 +106,7 @@ public class JwtTokenHelper
                 {"sub", userId},
                 {"jti", rtId}
             },
-            _refreshTokenLifetime);
+            _configuration.GetRefreshTokenLifetime());
 
         return new TokenPair(accessToken, refreshToken);
     }
