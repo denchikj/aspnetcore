@@ -1,7 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Minimal.WebApi;
+using Minimal.WebApi.Filters;
+using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +23,41 @@ builder.Services.AddSwaggerGen(options =>
     var xmlFileName = $"{projectName}.xml";
 
     options.IncludeXmlComments(Path.Combine(projectDirectory, xmlFileName));
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Put your access token here (drop **Bearer** prefix):",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    options.OperationFilter<OpenApiAuthFilter>();
 });
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var jwtSecret = Encoding.ASCII.GetBytes(configuration["JwtAuth:Secret"]);
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            RequireSignedTokens = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(jwtSecret),
+
+            ValidateAudience = false,
+            ValidateIssuer = false,
+
+            RequireExpirationTime = true,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+        options.RequireHttpsMetadata = false;
+
+        var tokenHandler = options.SecurityTokenValidators.OfType<JwtSecurityTokenHandler>().Single();
+        tokenHandler.InboundClaimTypeMap.Clear();
+        tokenHandler.OutboundClaimTypeMap.Clear();
+    });
 builder.Services.AddDbContext<DatabaseContext>(options =>
 {
     var connectionString = configuration.GetConnectionString("PostgreSQL");
@@ -34,6 +73,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

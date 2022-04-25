@@ -1,6 +1,7 @@
 ﻿namespace Minimal.WebApi.User;
 
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -21,3 +22,15 @@ public class UserEntity
     public string Password { get; set; }
 }
 
+[Table("refresh_tokens")]
+public class RefreshTokenEntity
+{
+    [Column("id")]
+    public Guid Id { get; set; }
+
+    [Column("user_id")]
+    public Guid UserId { get; set; }
+
+    [Column("expiration_time")]
+    public DateTime ExpirationTime { get; set; }
+}
