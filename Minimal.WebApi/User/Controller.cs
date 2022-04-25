@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Minimal.WebApi.Helpers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mime;
 using System.Security.Claims;
@@ -18,11 +19,13 @@ public class UserController : ControllerBase
 {
     private readonly DatabaseContext _context;
     private readonly IConfiguration _configuration;
+    private readonly JwtTokenHelper _tokenHelper;
 
-    public UserController(DatabaseContext context, IConfiguration configuration)
+    public UserController(DatabaseContext context, IConfiguration configuration, JwtTokenHelper tokenHelper)
     {
         _context = context;
         _configuration = configuration;
+        _tokenHelper = tokenHelper;
     }
 
     /// <summary>Get information about the current user.</summary>
@@ -101,23 +104,7 @@ public class UserController : ControllerBase
             return Conflict("Incorrect password");
         }
 
-        // Prepare token info
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var jwtSecret = Encoding.ASCII.GetBytes(_configuration["JwtAuth:Secret"]);
-        var accessTokenLifetime = int.Parse(_configuration["JwtAuth:AccessTokenLifetime"]);
         var refreshTokenLifetime = int.Parse(_configuration["JwtAuth:RefreshTokenLifetime"]);
-
-        // Issue access token
-        var accessTokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(new[] { new Claim("sub", user.Id.ToString()) }),
-            Expires = DateTime.UtcNow.AddMinutes(accessTokenLifetime),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(jwtSecret),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
-
-        var accessToken = tokenHandler.CreateToken(accessTokenDescriptor);
-        var encodedAccessToken = tokenHandler.WriteToken(accessToken);
 
         // Save refresh token info
         var refreshTokenEntity = new RefreshTokenEntity
@@ -130,27 +117,12 @@ public class UserController : ControllerBase
         _context.RefreshTokens.Add(refreshTokenEntity);
         await _context.SaveChangesAsync();
 
-        //Issue refresh token
-        var refreshTokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim("sub", user.Id.ToString()),
-                new Claim("jti", refreshTokenEntity.Id.ToString())
-            }),
-            Expires = refreshTokenEntity.ExpirationTime,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(jwtSecret),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
-
-        var refreshToken = tokenHandler.CreateToken(refreshTokenDescriptor);
-        var encodedRefreshToken = tokenHandler.WriteToken(refreshToken);
-
+        var tokenPair = _tokenHelper.IssueTokenPair(user.Id, refreshTokenEntity.Id);
         // Return token pair back to user
         var tokenPairDto = new TokenPairDto
         {
-            AccessToken = encodedAccessToken,
-            RefreshToken = encodedRefreshToken
+            AccessToken = tokenPair.AccessToken,
+            RefreshToken = tokenPair.RefreshToken
         };
 
         return Ok(tokenPairDto);
@@ -167,100 +139,50 @@ public class UserController : ControllerBase
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> RefreshTokenPair([FromBody] string refreshToken)
     {
-        var jwtSecret = Encoding.ASCII.GetBytes(_configuration["JwtAuth:Secret"]);
-        var tokenValidationParameters = new TokenValidationParameters
-        {
-            RequireSignedTokens = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(jwtSecret),
 
-            ValidateAudience = false,
-            ValidateIssuer = false,
-
-            RequireExpirationTime = true,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
-        };
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        tokenHandler.InboundClaimTypeMap.Clear();
-        tokenHandler.OutboundClaimTypeMap.Clear();
-
-        try
-        {
-            var principal = tokenHandler.ValidateToken(refreshToken, tokenValidationParameters, out _);
-
-            // Check if token has already been used
-            var jtiClaim = principal.Claims.Single(claim => claim.Type == "jti");
-            var refreshTokenId = Guid.Parse(jtiClaim.Value);
-            var refreshTokenEntity = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.Id == refreshTokenId);
-            
-            if (refreshTokenEntity is null)
-            {
-                // The token is either fake or has already been used
-                return Conflict("Provided refresh token has already been used");
-            }
-
-            // Remove a token from the database so that it can no longer be used
-            _context.RefreshTokens.Remove(refreshTokenEntity);
-            await _context.SaveChangesAsync();
-
-            // Prepare token info
-            var userId = principal.Claims.Single(claim => claim.Type == "sub").Value;
-            var accessTokenLifetime = int.Parse(_configuration["JwtAuth:AccessTokenLifetime"]);
-            var refreshTokenLifetime = int.Parse(_configuration["JwtAuth:RefreshTokenLifetime"]);
-
-            // Issue new access token 
-            var accessTokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[] { new Claim("sub", userId) }),
-                Expires = DateTime.UtcNow.AddMinutes(accessTokenLifetime),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(jwtSecret),
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var newAccessToken = tokenHandler.CreateToken(accessTokenDescriptor);
-            var encodedNewAccessToken = tokenHandler.WriteToken(newAccessToken);
-
-            // Save refresh token info
-            var newRefreshTokenEntity = new RefreshTokenEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = Guid.Parse(userId),
-                ExpirationTime = DateTime.UtcNow.AddDays(refreshTokenLifetime)
-            };
-
-            _context.RefreshTokens.Add(newRefreshTokenEntity);
-            await _context.SaveChangesAsync();
-
-            // Issue new refresh token
-            var refreshTokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim("sub", userId),
-                    new Claim("jti", refreshTokenEntity.Id.ToString())
-                }),
-                Expires = refreshTokenEntity.ExpirationTime,
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(jwtSecret),
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var newRefreshToken = tokenHandler.CreateToken(refreshTokenDescriptor);
-            var encodedNewRefreshToken = tokenHandler.WriteToken(newRefreshToken);
-
-            // Return new token pair back to user
-            var tokenPairDto = new TokenPairDto
-            {
-                AccessToken = encodedNewAccessToken,
-                RefreshToken = encodedNewRefreshToken
-            };
-
-            return Ok(tokenPairDto);
-        }
-        catch (Exception)
+        var refreshTokenClaims = _tokenHelper.ParseToken(refreshToken);
+        if (refreshTokenClaims is null)
         {
             return BadRequest("Invalid refresh token was provided");
         }
+
+        var refreshTokenId = Guid.Parse(refreshTokenClaims["jti"]);
+        var refreshTokenEntity = await _context.RefreshTokens.SingleOrDefaultAsync(rt => rt.Id == refreshTokenId);
+
+        if (refreshTokenEntity is null)
+        {
+            // The token is either fake or has already been used
+            return Conflict("Provided refresh token has already been used");
+        }
+
+        // Remove a token from the database so that it can no longer be used
+        _context.RefreshTokens.Remove(refreshTokenEntity);
+        await _context.SaveChangesAsync();
+
+        // Prepare token info
+        var userId = Guid.Parse(refreshTokenClaims["sub"]);
+        var refreshTokenLifetime = int.Parse(_configuration["JwtAuth:RefreshTokenLifetime"]);
+
+        // Save refresh token info
+        var newRefreshTokenEntity = new RefreshTokenEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            ExpirationTime = DateTime.UtcNow.AddDays(refreshTokenLifetime)
+        };
+
+        _context.RefreshTokens.Add(newRefreshTokenEntity);
+        await _context.SaveChangesAsync();
+
+        var tokenPair = _tokenHelper.IssueTokenPair(userId, refreshTokenEntity.Id);
+
+        // Return new token pair back to user
+        var tokenPairDto = new TokenPairDto
+        {
+            AccessToken = tokenPair.AccessToken,
+            RefreshToken = tokenPair.RefreshToken
+        };
+
+        return Ok(tokenPairDto);
     }
 }

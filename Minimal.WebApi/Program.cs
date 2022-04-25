@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Minimal.WebApi;
 using Minimal.WebApi.Filters;
+using Minimal.WebApi.Helpers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using System.Text;
@@ -14,7 +15,6 @@ var configuration = new ConfigurationBuilder()
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json")
     .Build();
 
-builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
 {
     var projectDirectory = AppContext.BaseDirectory;
@@ -63,6 +63,9 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
     var connectionString = configuration.GetConnectionString("PostgreSQL");
     options.UseNpgsql(connectionString);
 });
+builder.Services.AddScoped<JwtTokenHelper>();
+builder.Services.AddControllers();
+
 
 var app = builder.Build();
 
