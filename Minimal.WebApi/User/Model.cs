@@ -1,36 +1,76 @@
 ﻿namespace Minimal.WebApi.User;
 
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-
-[Table("users")]
-[Index(nameof(Username), IsUnique = true)]
 public class UserEntity
 {
-    [Column("id")]
     public Guid Id { get; set; }
-
-    [Column("display_name")]
     public string DisplayName { get; set; }
-
-    [Column("username")]
     public string Username { get; set; }
-
-    [Column("password")]
     public string Password { get; set; }
 }
 
-[Table("refresh_tokens")]
+internal class UserEntityTypeConfiguration : IEntityTypeConfiguration<UserEntity>
+{
+    public void Configure(EntityTypeBuilder<UserEntity> entity)
+    {
+        entity.ToTable("users");
+
+        entity
+            .HasKey(user => user.Id)
+            .HasName("pk_users");
+
+        entity
+            .HasIndex(user => user.Username)
+            .IsUnique()
+            .HasDatabaseName("ix_users_username");
+
+        entity
+            .Property(user => user.Id)
+            .HasColumnName("id");
+
+        entity
+            .Property(user => user.DisplayName)
+            .HasColumnName("display_name");
+
+        entity
+            .Property(user => user.Username)
+            .HasColumnName("username");
+
+        entity
+            .Property(user => user.Password)
+            .HasColumnName("password");
+    }
+}
+
 public class RefreshTokenEntity
 {
-    [Column("id")]
     public Guid Id { get; set; }
-
-    [Column("user_id")]
     public Guid UserId { get; set; }
-
-    [Column("expiration_time")]
     public DateTime ExpirationTime { get; set; }
+}
+
+internal class RefreshTokenEntityTypeConfiguration : IEntityTypeConfiguration<RefreshTokenEntity>
+{
+    public void Configure(EntityTypeBuilder<RefreshTokenEntity> entity)
+    {
+        entity.ToTable("refresh_tokens");
+
+        entity
+            .HasKey(refreshToken => refreshToken.Id)
+            .HasName("pk_refresh_tokens");
+
+        entity
+            .Property(refreshToken => refreshToken.Id)
+            .HasColumnName("id");
+
+        entity
+            .Property(refreshTokenEntity => refreshTokenEntity.UserId)
+            .HasColumnName("user_id");
+
+        entity
+            .Property(refreshToken => refreshToken.ExpirationTime)
+            .HasColumnName("expiration_time");
+    }
 }

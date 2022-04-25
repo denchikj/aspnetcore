@@ -3,6 +3,7 @@
 using Microsoft.EntityFrameworkCore;
 using Minimal.WebApi.Meetup;
 using Minimal.WebApi.User;
+using System.Reflection;
 
 public class DatabaseContext : DbContext
 {
@@ -13,5 +14,8 @@ public class DatabaseContext : DbContext
         : base(options)
     {
     }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 }
 
